@@ -5,46 +5,62 @@ on:
     branches:
       - main
 
+env:
+  IMAGE_NAME: maxem7240/gestion-guias-despachocloud
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Descargar codigo del repositorio
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Configurar Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+          cache: maven
 
-      - name: Build Maven project
+      - name: Compilar proyecto con Maven
         run: mvn -B clean package -DskipTests
 
-      - name: Login to Docker Hub
+      - name: Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Iniciar sesion en Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push Docker image
+      - name: Construir y subir imagen a Docker Hub
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/gestion-guias-despacho-cloud:latest
+          tags: ${{ env.IMAGE_NAME }}:latest
 
-      - name: Deploy on EC2
+      - name: Desplegar aplicacion en EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/gestion-guias-despacho-cloud:latest
+            echo "Descargando imagen desde Docker Hub..."
+            docker pull ${{ env.IMAGE_NAME }}:latest
+
+            echo "Deteniendo contenedor anterior si existe..."
             docker stop gestion-guias || true
             docker rm gestion-guias || true
+
+            echo "Creando carpeta EFS si no existe..."
+            sudo mkdir -p /mnt/efs/guias
+            sudo chmod -R 777 /mnt/efs/guias
+
+            echo "Ejecutando nuevo contenedor..."
             docker run -d \
               --name gestion-guias \
               --restart=always \
@@ -56,4 +72,7 @@ jobs:
               -e AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
               -e EFS_BASE_PATH=/mnt/efs/guias \
               -v /mnt/efs/guias:/mnt/efs/guias \
-              ${{ secrets.DOCKERHUB_USERNAME }}/gestion-guias-despacho-cloud:latest
+              ${{ env.IMAGE_NAME }}:latest
+
+            echo "Contenedor desplegado correctamente."
+            docker ps
