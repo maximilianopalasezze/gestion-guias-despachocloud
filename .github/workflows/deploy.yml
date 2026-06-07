@@ -49,6 +49,9 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            echo "Verificando Docker..."
+            docker --version
+
             echo "Descargando imagen desde Docker Hub..."
             docker pull ${{ env.IMAGE_NAME }}:latest
 
@@ -56,9 +59,9 @@ jobs:
             docker stop gestion-guias || true
             docker rm gestion-guias || true
 
-            echo "Creando carpeta EFS si no existe..."
-            sudo mkdir -p /mnt/efs/guias
-            sudo chmod -R 777 /mnt/efs/guias
+            echo "Verificando carpeta EFS montada en EC2..."
+            ls -la /home/ec2-user/efs || true
+            df -h | grep efs || true
 
             echo "Ejecutando nuevo contenedor..."
             docker run -d \
@@ -71,7 +74,7 @@ jobs:
               -e AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} \
               -e AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
               -e EFS_BASE_PATH=/mnt/efs/guias \
-              -v /mnt/efs/guias:/mnt/efs/guias \
+              -v /home/ec2-user/efs:/mnt/efs/guias \
               ${{ env.IMAGE_NAME }}:latest
 
             echo "Contenedor desplegado correctamente."
