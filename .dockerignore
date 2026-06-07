@@ -1,4 +1,5 @@
-.git/
-.gitignore
+.git
+.github
 README.md
-nbproject/private/
+target
+*.log
