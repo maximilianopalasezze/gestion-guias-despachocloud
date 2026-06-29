@@ -40,7 +40,9 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.IMAGE_NAME }}:latest
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.IMAGE_NAME }}:latest
 
       - name: Desplegar aplicacion en EC2
         uses: appleboy/ssh-action@v1.0.3
@@ -52,8 +54,8 @@ jobs:
             echo "Verificando Docker..."
             docker --version
 
-            echo "Descargando imagen desde Docker Hub..."
-            docker pull ${{ env.IMAGE_NAME }}:latest
+            echo "Descargando imagen exacta del commit..."
+            docker pull ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
             echo "Deteniendo contenedor anterior si existe..."
             docker stop gestion-guias || true
@@ -63,7 +65,7 @@ jobs:
             ls -la /home/ec2-user/efs || true
             df -h | grep efs || true
 
-            echo "Ejecutando nuevo contenedor..."
+            echo "Ejecutando contenedor de la version actual..."
             docker run -d \
               --name gestion-guias \
               --restart=always \
@@ -80,7 +82,16 @@ jobs:
               -e AZURE_B2C_POLICY="B2C_1_gestion_guias" \
               -e EFS_BASE_PATH="/mnt/efs/guias" \
               -v /home/ec2-user/efs:/mnt/efs/guias \
-              ${{ env.IMAGE_NAME }}:latest
+              ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
             echo "Contenedor desplegado correctamente."
             docker ps
+
+            echo "Verificando variables Azure B2C del contenedor..."
+            docker inspect gestion-guias \
+              --format '{{range .Config.Env}}{{println .}}{{end}}' \
+              | grep '^AZURE_B2C' || true
+
+            echo "Verificando issuer incluido en el JAR..."
+            docker exec gestion-guias sh -c \
+              'unzip -p /app/app.jar BOOT-INF/classes/application.properties | grep app.security.b2c.issuer' || true
