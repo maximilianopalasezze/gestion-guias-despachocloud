@@ -20,7 +20,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
           cache: maven
 
       - name: Compilar proyecto con Maven
@@ -68,13 +68,17 @@ jobs:
               --name gestion-guias \
               --restart=always \
               -p 8080:8080 \
-              -e AWS_REGION=${{ secrets.AWS_REGION }} \
-              -e AWS_S3_BUCKET_NAME=${{ secrets.AWS_S3_BUCKET_NAME }} \
+              -e AWS_REGION="${{ secrets.AWS_REGION }}" \
+              -e AWS_S3_BUCKET_NAME="${{ secrets.AWS_S3_BUCKET_NAME }}" \
               -e AWS_S3_ENABLED=true \
-              -e AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} \
-              -e AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
-              -e AWS_SESSION_TOKEN=${{ secrets.AWS_SESSION_TOKEN }} \
-              -e EFS_BASE_PATH=/mnt/efs/guias \
+              -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
+              -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+              -e AWS_SESSION_TOKEN="${{ secrets.AWS_SESSION_TOKEN }}" \
+              -e AZURE_B2C_JWK_SET_URI="https://tallercloudnative1.b2clogin.com/tallercloudnative1.onmicrosoft.com/B2C_1_gestion_guias/discovery/v2.0/keys" \
+              -e AZURE_B2C_ISSUER="https://tallercloudnative1.b2clogin.com/tfp/858fc5c4-4d14-449c-988b-c3af598aca2a/b2c_1_gestion_guias/v2.0/" \
+              -e AZURE_B2C_AUDIENCE="b1b65384-d1c0-4f6a-a2b5-ea648ae9fafb" \
+              -e AZURE_B2C_POLICY="B2C_1_gestion_guias" \
+              -e EFS_BASE_PATH="/mnt/efs/guias" \
               -v /home/ec2-user/efs:/mnt/efs/guias \
               ${{ env.IMAGE_NAME }}:latest
 
