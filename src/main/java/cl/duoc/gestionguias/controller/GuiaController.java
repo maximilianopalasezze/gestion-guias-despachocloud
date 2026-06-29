@@ -34,31 +34,35 @@ public class GuiaController {
     }
 
     @PostMapping
-    public ResponseEntity<GuiaResponseDTO> crearGuia(@Valid @RequestBody GuiaRequestDTO request) {
+    public ResponseEntity<GuiaResponseDTO> crearGuia(
+            @Valid @RequestBody GuiaRequestDTO request
+    ) {
         GuiaResponseDTO response = guiaService.crearGuia(request);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{id}/subir-s3")
-    public ResponseEntity<GuiaResponseDTO> subirGuiaAS3(@PathVariable Long id) {
+    public ResponseEntity<GuiaResponseDTO> subirGuiaAS3(
+            @PathVariable Long id
+    ) {
         GuiaResponseDTO response = guiaService.subirGuiaAS3(id);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}/descargar")
-    public ResponseEntity<byte[]> descargarGuia(
-            @PathVariable Long id,
-            @RequestParam String transportista) {
-
+    public ResponseEntity<byte[]> descargarGuia(@PathVariable Long id) {
         GuiaResponseDTO guia = guiaService.obtenerGuia(id);
-        byte[] archivo = guiaService.descargarGuia(id, transportista);
+        byte[] archivo = guiaService.descargarGuia(id);
 
         ContentDisposition contentDisposition = ContentDisposition.attachment()
                 .filename(guia.getNombreArchivo())
                 .build();
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        contentDisposition.toString()
+                )
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(archivo);
     }
@@ -66,29 +70,44 @@ public class GuiaController {
     @PutMapping("/{id}")
     public ResponseEntity<GuiaResponseDTO> actualizarGuia(
             @PathVariable Long id,
-            @Valid @RequestBody GuiaUpdateDTO request) {
-
+            @Valid @RequestBody GuiaUpdateDTO request
+    ) {
         GuiaResponseDTO response = guiaService.actualizarGuia(id, request);
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<MensajeResponseDTO> eliminarGuia(@PathVariable Long id) {
+    public ResponseEntity<MensajeResponseDTO> eliminarGuia(
+            @PathVariable Long id
+    ) {
         guiaService.eliminarGuia(id);
-        return ResponseEntity.ok(new MensajeResponseDTO("Guia eliminada correctamente desde EFS, S3 e historial"));
+
+        return ResponseEntity.ok(
+                new MensajeResponseDTO(
+                        "Guia eliminada correctamente desde EFS, S3 e historial"
+                )
+        );
     }
 
     @GetMapping
     public ResponseEntity<List<GuiaResponseDTO>> consultarGuias(
             @RequestParam(required = false) String transportista,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate fecha
+    ) {
+        List<GuiaResponseDTO> response = guiaService.consultarGuias(
+                transportista,
+                fecha
+        );
 
-        List<GuiaResponseDTO> response = guiaService.consultarGuias(transportista, fecha);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<GuiaResponseDTO> obtenerGuia(@PathVariable Long id) {
+    public ResponseEntity<GuiaResponseDTO> obtenerGuia(
+            @PathVariable Long id
+    ) {
         GuiaResponseDTO response = guiaService.obtenerGuia(id);
         return ResponseEntity.ok(response);
     }

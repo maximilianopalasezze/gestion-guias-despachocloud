@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -30,7 +31,11 @@ public class AwsConfig {
 
         AwsCredentialsProvider credentialsProvider;
 
-        if (sessionToken != null && !sessionToken.isBlank()) {
+        boolean tieneAccessKey = accessKeyId != null && !accessKeyId.isBlank();
+        boolean tieneSecretKey = secretAccessKey != null && !secretAccessKey.isBlank();
+        boolean tieneSessionToken = sessionToken != null && !sessionToken.isBlank();
+
+        if (tieneAccessKey && tieneSecretKey && tieneSessionToken) {
             credentialsProvider = StaticCredentialsProvider.create(
                     AwsSessionCredentials.create(
                             accessKeyId,
@@ -38,13 +43,20 @@ public class AwsConfig {
                             sessionToken
                     )
             );
-        } else {
+        } else if (tieneAccessKey && tieneSecretKey) {
             credentialsProvider = StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(
                             accessKeyId,
                             secretAccessKey
                     )
             );
+        } else {
+            /*
+             * En local permite iniciar sin credenciales AWS.
+             * En EC2 buscará credenciales mediante variables de entorno,
+             * perfil local o rol IAM, según corresponda.
+             */
+            credentialsProvider = DefaultCredentialsProvider.create();
         }
 
         return S3Client.builder()
