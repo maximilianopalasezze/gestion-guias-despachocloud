@@ -13,10 +13,10 @@
     </parent>
 
     <groupId>cl.duoc</groupId>
-    <artifactId>gestion-guias-despacho-cloud</artifactId>
+    <artifactId>consumidor-guias</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>gestion-guias-despacho-cloud</name>
-    <description>Sistema Cloud Native para gestion de guias de despacho con EFS, S3, RabbitMQ, Docker y EC2</description>
+    <name>consumidor-guias</name>
+    <description>Microservicio consumidor de guias de despacho desde RabbitMQ</description>
 
     <properties>
         <java.version>17</java.version>
@@ -42,32 +42,32 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Validaciones DTO -->
+        <!-- Validaciones -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
-        <!-- Seguridad JWT con Azure AD B2C -->
+        <!-- Seguridad JWT -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
         </dependency>
 
-        <!-- Persistencia JPA -->
+        <!-- JPA -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
-        <!-- Base de datos H2 -->
+        <!-- H2 persistente -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <scope>runtime</scope>
         </dependency>
 
-        <!-- RabbitMQ / AMQP -->
+        <!-- RabbitMQ -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-amqp</artifactId>
@@ -79,21 +79,20 @@
             <artifactId>s3</artifactId>
         </dependency>
 
-        <!-- Generación PDF -->
+        <!-- PDF -->
         <dependency>
             <groupId>com.github.librepdf</groupId>
             <artifactId>openpdf</artifactId>
             <version>1.3.39</version>
         </dependency>
 
-        <!-- Testing -->
+        <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- Testing AMQP -->
         <dependency>
             <groupId>org.springframework.amqp</groupId>
             <artifactId>spring-rabbit-test</artifactId>
@@ -102,6 +101,7 @@
     </dependencies>
 
     <build>
+        <finalName>consumidor-guias</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

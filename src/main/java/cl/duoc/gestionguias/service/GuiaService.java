@@ -1,5 +1,7 @@
 package cl.duoc.gestionguias.service;
 
+import cl.duoc.gestionguias.dto.GuiaErrorMensajeDTO;
+import cl.duoc.gestionguias.dto.GuiaMensajeDTO;
 import cl.duoc.gestionguias.dto.GuiaRequestDTO;
 import cl.duoc.gestionguias.dto.GuiaResponseDTO;
 import cl.duoc.gestionguias.dto.GuiaUpdateDTO;
@@ -11,6 +13,7 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,18 +25,22 @@ public class GuiaService {
     private final S3StorageService s3StorageService;
     private final PdfGeneratorService pdfGeneratorService;
     private final GuiaMapper guiaMapper;
+    private final GuiaProducerService guiaProducerService;
 
     public GuiaService(
             GuiaRepository guiaRepository,
             EfsStorageService efsStorageService,
             S3StorageService s3StorageService,
             PdfGeneratorService pdfGeneratorService,
-            GuiaMapper guiaMapper) {
+            GuiaMapper guiaMapper,
+            GuiaProducerService guiaProducerService
+    ) {
         this.guiaRepository = guiaRepository;
         this.efsStorageService = efsStorageService;
         this.s3StorageService = s3StorageService;
         this.pdfGeneratorService = pdfGeneratorService;
         this.guiaMapper = guiaMapper;
+        this.guiaProducerService = guiaProducerService;
     }
 
     @Transactional
@@ -70,14 +77,16 @@ public class GuiaService {
         guardada.setNombreArchivo(nombreArchivo);
         guardada.setRutaEfs(rutaArchivo.toString());
 
-        // La guía se genera inicialmente solo en EFS.
+        // La guía se genera inicialmente como PDF real en EFS/local.
         pdfGeneratorService.generarPdf(guardada, rutaArchivo);
 
         guardada.setFechaActualizacion(LocalDateTime.now());
 
-        return guiaMapper.convertirAResponseDTO(
-                guiaRepository.save(guardada)
-        );
+        Guia guiaFinal = guiaRepository.save(guardada);
+
+        enviarGuiaCreadaARabbitMQ(guiaFinal);
+
+        return guiaMapper.convertirAResponseDTO(guiaFinal);
     }
 
     @Transactional
@@ -135,7 +144,7 @@ public class GuiaService {
 
         guia.setRutaEfs(rutaArchivo.toString());
 
-        // Se genera nuevamente el PDF actualizado en EFS.
+        // Se genera nuevamente el PDF actualizado en EFS/local.
         pdfGeneratorService.generarPdf(guia, rutaArchivo);
 
         // Si la guía ya existía en S3, se sobrescribe con la versión actualizada.
@@ -158,7 +167,7 @@ public class GuiaService {
             guia.setRutaS3(nuevaRutaS3);
             guia.setEstado(EstadoGuia.ACTUALIZADA_S3);
         } else {
-            // Si nunca fue subida a S3, se mantiene solamente en EFS.
+            // Si nunca fue subida a S3, se mantiene solamente en EFS/local.
             guia.setEstado(EstadoGuia.GENERADA_EFS);
         }
 
@@ -223,5 +232,55 @@ public class GuiaService {
     private Guia buscarGuiaPorId(Long id) {
         return guiaRepository.findById(id)
                 .orElseThrow(() -> new GuiaNoEncontradaException(id));
+    }
+
+    private void enviarGuiaCreadaARabbitMQ(Guia guia) {
+        String correlationId = UUID.randomUUID().toString();
+
+        try {
+            GuiaMensajeDTO mensaje = construirMensajeGuia(guia, correlationId);
+            guiaProducerService.enviarGuiaColaPrincipal(mensaje);
+        } catch (Exception ex) {
+            GuiaErrorMensajeDTO mensajeError = new GuiaErrorMensajeDTO(
+                    guia.getId(),
+                    guia.getNumeroGuia(),
+                    correlationId,
+                    ex.getMessage(),
+                    "PRODUCTOR_GUIAS",
+                    LocalDateTime.now()
+            );
+
+            try {
+                guiaProducerService.enviarGuiaColaErrores(mensajeError);
+            } catch (Exception errorDlq) {
+                /*
+                 * No relanzamos la excepción para no perder la guía ya generada.
+                 * El consumidor independiente y la DLQ serán evidenciados en la prueba final.
+                 */
+            }
+        }
+    }
+
+    private GuiaMensajeDTO construirMensajeGuia(
+            Guia guia,
+            String correlationId
+    ) {
+        return new GuiaMensajeDTO(
+                guia.getId(),
+                guia.getNumeroGuia(),
+                guia.getTransportista(),
+                guia.getDestinatario(),
+                guia.getDireccionDestino(),
+                guia.getDescripcionPedido(),
+                guia.getPesoKg(),
+                guia.getFechaGeneracion(),
+                guia.getFechaDespacho(),
+                guia.getNombreArchivo(),
+                guia.getRutaEfs(),
+                guia.getRutaS3(),
+                guia.getFechaCreacion(),
+                LocalDateTime.now(),
+                correlationId
+        );
     }
 }
