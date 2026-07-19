@@ -12,9 +12,11 @@ import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
-import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
-import java.util.List;
 
 @Configuration
 @Profile("!local")
@@ -41,9 +43,13 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/consumidor/guias/consumir").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/consumidor/guias/procesadas").authenticated()
+                        .requestMatchers("/actuator/health").permitAll()
+
+                        .requestMatchers(HttpMethod.POST, "/api/consumidor/guias/consumir").hasAuthority("SCOPE_guias.gestion")
+                        .requestMatchers(HttpMethod.GET, "/api/consumidor/guias/procesadas").hasAuthority("SCOPE_guias.gestion")
+
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 ->
@@ -83,7 +89,11 @@ public class SecurityConfig {
         OAuth2TokenValidator<Jwt> policyValidator = jwt -> {
             String tokenPolicy = jwt.getClaimAsString("tfp");
 
-            if (policy.equals(tokenPolicy)) {
+            if (tokenPolicy == null) {
+                tokenPolicy = jwt.getClaimAsString("acr");
+            }
+
+            if (tokenPolicy != null && policy.equalsIgnoreCase(tokenPolicy)) {
                 return OAuth2TokenValidatorResult.success();
             }
 

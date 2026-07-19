@@ -35,30 +35,34 @@ public class SecurityConfig {
     private String policy;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(
-            HttpSecurity http,
-            JwtDecoder jwtDecoder
-    ) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         return http
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                HttpMethod.GET,
-                                "/api/guias/*/descargar"
-                        ).hasAuthority("SCOPE_guias.descarga")
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/h2-console/**").permitAll()
+                        .requestMatchers("/swagger-ui/**").permitAll()
+                        .requestMatchers("/v3/api-docs/**").permitAll()
+                        .requestMatchers("/actuator/health").permitAll()
 
-                        .requestMatchers("/api/guias/**")
-                        .hasAuthority("SCOPE_guias.gestion")
+                        .requestMatchers(HttpMethod.GET, "/api/guias/**").hasAuthority("SCOPE_guias.gestion")
+                        .requestMatchers(HttpMethod.POST, "/api/guias/**").hasAuthority("SCOPE_guias.gestion")
+                        .requestMatchers(HttpMethod.PUT, "/api/guias/**").hasAuthority("SCOPE_guias.gestion")
+                        .requestMatchers(HttpMethod.DELETE, "/api/guias/**").hasAuthority("SCOPE_guias.gestion")
 
-                        .anyRequest()
-                        .authenticated()
+                        .anyRequest().authenticated()
                 )
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.decoder(jwtDecoder))
+                .oauth2ResourceServer(oauth2 ->
+                        oauth2.jwt(jwt ->
+                                jwt.decoder(jwtDecoder())
+                        )
+                )
+                .headers(headers ->
+                        headers.frameOptions(frameOptions -> frameOptions.sameOrigin())
                 )
                 .build();
     }
@@ -89,7 +93,11 @@ public class SecurityConfig {
         OAuth2TokenValidator<Jwt> policyValidator = jwt -> {
             String tokenPolicy = jwt.getClaimAsString("tfp");
 
-            if (policy.equals(tokenPolicy)) {
+            if (tokenPolicy == null) {
+                tokenPolicy = jwt.getClaimAsString("acr");
+            }
+
+            if (tokenPolicy != null && policy.equalsIgnoreCase(tokenPolicy)) {
                 return OAuth2TokenValidatorResult.success();
             }
 
