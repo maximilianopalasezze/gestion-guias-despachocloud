@@ -25,11 +25,25 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: local
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-ec2}
+
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       RABBITMQ_USERNAME: duoc
       RABBITMQ_PASSWORD: duoc123
+
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_S3_ENABLED: ${AWS_S3_ENABLED:-true}
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
+
+      APP_SECURITY_B2C_JWK_SET_URI: ${APP_SECURITY_B2C_JWK_SET_URI}
+      APP_SECURITY_B2C_ISSUER: ${APP_SECURITY_B2C_ISSUER}
+      APP_SECURITY_B2C_AUDIENCE: ${APP_SECURITY_B2C_AUDIENCE}
+      APP_SECURITY_B2C_POLICY: ${APP_SECURITY_B2C_POLICY}
+
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -43,14 +57,25 @@ services:
     ports:
       - "8081:8081"
     environment:
-      SPRING_PROFILES_ACTIVE: local
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-ec2}
+
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       RABBITMQ_USERNAME: duoc
       RABBITMQ_PASSWORD: duoc123
-      AWS_REGION: us-east-1
-      AWS_S3_ENABLED: false
-      AWS_S3_BUCKET_NAME:
+
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_S3_ENABLED: ${AWS_S3_ENABLED:-true}
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
+
+      APP_SECURITY_B2C_JWK_SET_URI: ${APP_SECURITY_B2C_JWK_SET_URI}
+      APP_SECURITY_B2C_ISSUER: ${APP_SECURITY_B2C_ISSUER}
+      APP_SECURITY_B2C_AUDIENCE: ${APP_SECURITY_B2C_AUDIENCE}
+      APP_SECURITY_B2C_POLICY: ${APP_SECURITY_B2C_POLICY}
+
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -58,3 +83,17 @@ services:
 
 volumes:
   rabbitmq_guias_data:
+SPRING_PROFILES_ACTIVE=ec2
+
+AWS_REGION=us-east-1
+AWS_S3_ENABLED=true
+AWS_S3_BUCKET_NAME=guias-despacho-cloud-maximiliano
+
+AWS_ACCESS_KEY_ID=PEGAR_ACCESS_KEY_DEL_LAB
+AWS_SECRET_ACCESS_KEY=PEGAR_SECRET_KEY_DEL_LAB
+AWS_SESSION_TOKEN=PEGAR_SESSION_TOKEN_DEL_LAB
+
+APP_SECURITY_B2C_JWK_SET_URI=https://tallercloudnative1.b2clogin.com/tallercloudnative1.onmicrosoft.com/b2c_1_gestion_guias/discovery/v2.0/keys
+APP_SECURITY_B2C_ISSUER=https://tallercloudnative1.b2clogin.com/tfp/858fc5c4-4d14-449c-988b-c3af598aca2a/b2c_1_gestion_guias/v2.0/
+APP_SECURITY_B2C_AUDIENCE=b1b65384-d1c0-4f6a-a2b5-ea648ae9fafb
+APP_SECURITY_B2C_POLICY=b2c_1_gestion_guias
